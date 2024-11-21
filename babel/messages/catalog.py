@@ -218,6 +218,25 @@ class Catalog:
         self.obsolete: OrderedDict[str | tuple[str, str], Message] = OrderedDict()
         self._num_plurals = None
         self._plural_expr = None
+    def _get_locale(self) -> Locale | None:
+        """The locale of the catalog as a `Locale` object."""
+        if not self._locale:
+            return None
+        return Locale.parse(self._locale)
+
+    def _set_locale(self, locale: str | Locale | None) -> None:
+        if locale:
+            if isinstance(locale, str):
+                self._locale = str(locale)
+            else:
+                self._locale = str(locale)
+        else:
+            self._locale = None
+
+    def _get_locale_identifier(self) -> str | None:
+        """The locale identifier of the catalog."""
+        return self._locale
+
     locale = property(_get_locale, _set_locale)
     locale_identifier = property(_get_locale_identifier)
     header_comment = property(_get_header_comment, _set_header_comment, doc="    The header comment for the catalog.\n\n    >>> catalog = Catalog(project='Foobar', version='1.0',\n    ...                   copyright_holder='Foo Company')\n    >>> print(catalog.header_comment) #doctest: +ELLIPSIS\n    # Translations template for Foobar.\n    # Copyright (C) ... Foo Company\n    # This file is distributed under the same license as the Foobar project.\n    # FIRST AUTHOR <EMAIL@ADDRESS>, ....\n    #\n\n    The header can also be set from a string. Any known upper-case variables\n    will be replaced when the header is retrieved again:\n\n    >>> catalog = Catalog(project='Foobar', version='1.0',\n    ...                   copyright_holder='Foo Company')\n    >>> catalog.header_comment = '''\\\n    ... # The POT for my really cool PROJECT project.\n    ... # Copyright (C) 1990-2003 ORGANIZATION\n    ... # This file is distributed under the same license as the PROJECT\n    ... # project.\n    ... #'''\n    >>> print(catalog.header_comment)\n    # The POT for my really cool Foobar project.\n    # Copyright (C) 1990-2003 Foo Company\n    # This file is distributed under the same license as the Foobar\n    # project.\n    #\n\n    :type: `unicode`\n    ")
