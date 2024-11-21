@@ -252,7 +252,7 @@ class Locale:
             value = getattr(self, key)
             if value is not None:
                 parameters.append(f'{key}={value!r}')
-        return f'Locale({self.language!r}{', '.join(parameters)})'
+        return f"Locale({self.language!r}{', '.join(parameters)})"
 
     def __str__(self) -> str:
         return get_locale_identifier((self.language, self.territory, self.script, self.variant, self.modifier))
