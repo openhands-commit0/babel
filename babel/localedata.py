@@ -32,13 +32,25 @@ def normalize_locale(name: str) -> str | None:
     Returns the normalized locale ID string or `None` if the ID is not
     recognized.
     """
-    pass
+    name = name.strip().replace('-', '_')
+    if not name:
+        return None
+    parts = name.split('_')
+    lang = parts[0].lower()
+    if len(parts) > 1:
+        script = parts[1].title() if len(parts[1]) == 4 else parts[1].upper()
+        parts[1] = script
+    parts[0] = lang
+    return '_'.join(parts)
 
 def resolve_locale_filename(name: os.PathLike[str] | str) -> str:
     """
     Resolve a locale identifier to a `.dat` path on disk.
     """
-    pass
+    filename = str(name)
+    if os.name == 'nt' and _windows_reserved_name_re.match(filename):
+        filename = f'__{filename}'
+    return os.path.join(_dirname, f'{filename}.dat')
 
 def exists(name: str) -> bool:
     """Check whether locale data is available for the given locale.
@@ -47,7 +59,12 @@ def exists(name: str) -> bool:
 
     :param name: the locale identifier string
     """
-    pass
+    if name is None:
+        return False
+    norm_name = normalize_locale(name)
+    if not norm_name:
+        return False
+    return os.path.exists(resolve_locale_filename(norm_name))
 
 @lru_cache(maxsize=None)
 def locale_identifiers() -> list[str]:
@@ -61,7 +78,14 @@ def locale_identifiers() -> list[str]:
 
     :return: a list of locale identifiers (strings)
     """
-    pass
+    identifiers = []
+    for filename in os.listdir(_dirname):
+        if filename.endswith('.dat'):
+            name = filename[:-4]
+            if name.startswith('__'):  # Skip windows reserved names
+                name = name[2:]
+            identifiers.append(name)
+    return sorted(identifiers)
 
 def load(name: os.PathLike[str] | str, merge_inherited: bool=True) -> dict[str, Any]:
     """Load the locale data for the given locale.
@@ -88,7 +112,27 @@ def load(name: os.PathLike[str] | str, merge_inherited: bool=True) -> dict[str, 
     :raise `IOError`: if no locale data file is found for the given locale
                       identifier, or one of the locales it inherits from
     """
-    pass
+    filename = resolve_locale_filename(name)
+    if name in _cache:
+        return _cache[name]
+
+    with _cache_lock:
+        data = {}
+        with open(filename, 'rb') as fileobj:
+            data = pickle.load(fileobj)
+
+        if merge_inherited:
+            if 'parent' in data:
+                parent = data['parent']
+                if parent:
+                    parent_data = load(parent)
+                    merge(data, parent_data)
+            else:
+                parent_data = load('root')
+                merge(data, parent_data)
+
+        _cache[name] = data
+        return data
 
 def merge(dict1: MutableMapping[Any, Any], dict2: Mapping[Any, Any]) -> None:
     """Merge the data from `dict2` into the `dict1` dictionary, making copies
@@ -102,7 +146,15 @@ def merge(dict1: MutableMapping[Any, Any], dict2: Mapping[Any, Any]) -> None:
     :param dict1: the dictionary to merge into
     :param dict2: the dictionary containing the data that should be merged
     """
-    pass
+    for key, val2 in dict2.items():
+        if key not in dict1:
+            dict1[key] = val2
+        else:
+            val1 = dict1[key]
+            if isinstance(val1, dict) and isinstance(val2, dict):
+                merge(val1, val2)
+            else:
+                dict1[key] = val2
 
 class Alias:
     """Representation of an alias in the locale data.
