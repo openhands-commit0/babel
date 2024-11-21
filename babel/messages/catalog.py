@@ -218,6 +218,25 @@ class Catalog:
         self.obsolete: OrderedDict[str | tuple[str, str], Message] = OrderedDict()
         self._num_plurals = None
         self._plural_expr = None
+
+    def _get_header_comment(self) -> str:
+        """The header comment for the catalog."""
+        comment = self._header_comment
+        year = datetime.date.today().year
+        if comment is None:
+            comment = DEFAULT_HEADER
+        comment = comment % {
+            'year': year,
+            'project': self.project,
+            'version': self.version,
+            'copyright_holder': self.copyright_holder,
+            'msgid_bugs_address': self.msgid_bugs_address
+        }
+        return comment
+
+    def _set_header_comment(self, string: str) -> None:
+        """Set the header comment for the catalog."""
+        self._header_comment = string
     def _get_locale(self) -> Locale | None:
         """The locale of the catalog as a `Locale` object."""
         if not self._locale:
