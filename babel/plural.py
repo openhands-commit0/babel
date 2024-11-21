@@ -236,7 +236,7 @@ def cldr_modulo(a: float, b: float) -> float:
 class RuleError(Exception):
     """Raised if a rule is malformed."""
 _VARS = {'n', 'i', 'v', 'w', 'f', 't', 'c', 'e'}
-_RULES: list[tuple[str | None, re.Pattern[str]]] = [(None, re.compile('\\s+', re.UNICODE)), ('word', re.compile(f'\\b(and|or|is|(?:with)?in|not|mod|[{''.join(_VARS)}])\\b')), ('value', re.compile('\\d+')), ('symbol', re.compile('%|,|!=|=')), ('ellipsis', re.compile('\\.{2,3}|\\u2026', re.UNICODE))]
+_RULES: list[tuple[str | None, re.Pattern[str]]] = [(None, re.compile('\\s+', re.UNICODE)), ('word', re.compile(f"\\b(and|or|is|(?:with)?in|not|mod|[{''.join(_VARS)}])\\b")), ('value', re.compile('\\d+')), ('symbol', re.compile('%|,|!=|=')), ('ellipsis', re.compile('\\.{2,3}|\\u2026', re.UNICODE))]
 
 class _Parser:
     """Internal parser.  This class can translate a single rule into an abstract
