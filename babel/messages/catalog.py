@@ -237,6 +237,63 @@ class Catalog:
     def _set_header_comment(self, string: str) -> None:
         """Set the header comment for the catalog."""
         self._header_comment = string
+
+    def _get_mime_headers(self) -> list[tuple[str, str]]:
+        """The MIME headers for the catalog."""
+        headers = []
+        headers.append(('Project-Id-Version', f'{self.project} {self.version}'))
+        headers.append(('Report-Msgid-Bugs-To', self.msgid_bugs_address))
+
+        if isinstance(self.creation_date, datetime.datetime):
+            creation_date = format_datetime(self.creation_date, 'yyyy-MM-dd HH:mmZ', locale='en')
+        else:
+            creation_date = self.creation_date
+        headers.append(('POT-Creation-Date', creation_date))
+
+        if isinstance(self.revision_date, datetime.datetime):
+            revision_date = format_datetime(self.revision_date, 'yyyy-MM-dd HH:mmZ', locale='en')
+        else:
+            revision_date = self.revision_date
+        headers.append(('PO-Revision-Date', revision_date))
+
+        headers.append(('Last-Translator', self.last_translator))
+        if self.locale:
+            headers.append(('Language', str(self.locale)))
+        headers.append(('Language-Team', self.language_team))
+        if self.locale:
+            headers.append(('Plural-Forms', self.plural_forms))
+
+        headers.append(('MIME-Version', '1.0'))
+        headers.append(('Content-Type', f'text/plain; charset={self.charset}'))
+        headers.append(('Content-Transfer-Encoding', '8bit'))
+        headers.append(('Generated-By', f'Babel {VERSION}\n'))
+        return headers
+
+    def _set_mime_headers(self, headers: list[tuple[str, str]]) -> None:
+        """Set the MIME headers for the catalog."""
+        for name, value in headers:
+            name = name.lower()
+            if name == 'project-id-version':
+                parts = value.split(' ')
+                self.project = ' '.join(parts[:-1])
+                self.version = parts[-1]
+            elif name == 'report-msgid-bugs-to':
+                self.msgid_bugs_address = value
+            elif name == 'last-translator':
+                self.last_translator = value
+            elif name == 'language':
+                self.locale = value
+            elif name == 'language-team':
+                self.language_team = value
+            elif name == 'content-type':
+                mimetype, params = message_from_string(f'Content-Type: {value}').get_params()[0]
+                if 'charset' in params:
+                    self.charset = params['charset'].lower()
+            elif name == 'plural-forms':
+                _, params = value.split(';', 1)
+                num, expr = params.split('=', 1)
+                self._num_plurals = int(num.strip().split('=', 1)[1])
+                self._plural_expr = expr.strip()
     def _get_locale(self) -> Locale | None:
         """The locale of the catalog as a `Locale` object."""
         if not self._locale:
