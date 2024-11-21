@@ -959,6 +959,11 @@ def get_locale_identifier(tup: tuple[str] | tuple[str, str | None] | tuple[str, 
     'de_DE_1999@custom'
     >>> get_locale_identifier(('fi', None, None, None, 'custom'))
     'fi@custom'
+
+    .. versionadded:: 1.0
+
+    :param tup: the tuple as returned by :func:`parse_locale`.
+    :param sep: the separator for the identifier.
     """
     language, territory, script, variant, modifier = (None,) * 5
     if len(tup) == 1:
@@ -990,10 +995,3 @@ def get_locale_identifier(tup: tuple[str] | tuple[str, str | None] | tuple[str, 
         identifier += '@' + modifier
 
     return identifier
-
-    .. versionadded:: 1.0
-
-    :param tup: the tuple as returned by :func:`parse_locale`.
-    :param sep: the separator for the identifier.
-    """
-    pass
