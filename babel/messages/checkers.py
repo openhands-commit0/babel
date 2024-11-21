@@ -14,13 +14,53 @@ from collections.abc import Callable
 from babel.messages.catalog import PYTHON_FORMAT, Catalog, Message, TranslationError
 _string_format_compatibilities = [{'i', 'd', 'u'}, {'x', 'X'}, {'f', 'F', 'g', 'G'}]
 
+def _find_checkers() -> list[Callable[[Catalog | None, Message], object]]:
+    """Find all functions in this module that can check messages.
+
+    A checker function takes two arguments, the catalog and the message,
+    and returns None if the message is valid, or raises a TranslationError
+    if the message is invalid.
+    """
+    checkers = []
+    for name, func in globals().items():
+        if name.startswith('_') or not callable(func):
+            continue
+        checkers.append(func)
+    return checkers
+
 def num_plurals(catalog: Catalog | None, message: Message) -> None:
     """Verify the number of plurals in the translation."""
-    pass
+    if not message.pluralizable or not message.string:
+        return
+    if not catalog or not catalog.num_plurals:
+        return
+    if len(message.string) != catalog.num_plurals:
+        raise TranslationError(
+            'catalog says there should be %d plural forms, but '
+            'message "%s" has %d' % (
+                catalog.num_plurals, message.id, len(message.string)
+            )
+        )
 
 def python_format(catalog: Catalog | None, message: Message) -> None:
     """Verify the format string placeholders in the translation."""
-    pass
+    if not message.python_format:
+        return
+    if not message.string:
+        return
+
+    msgid = message.id
+    if isinstance(msgid, (list, tuple)):
+        msgid = msgid[0]
+    msgstr = message.string
+    if isinstance(msgstr, (list, tuple)):
+        msgstr = msgstr[0]
+
+    if not PYTHON_FORMAT.search(msgid):
+        return
+
+    if not PYTHON_FORMAT.search(msgstr):
+        raise TranslationError('python format string mismatch')
 
 def _validate_format(format: str, alternative: str) -> None:
     """Test format string `alternative` against `format`.  `format` can be the
@@ -53,5 +93,32 @@ def _validate_format(format: str, alternative: str) -> None:
                         against format
     :raises TranslationError: on formatting errors
     """
-    pass
+    def _compare_format_chars(a: str, b: str) -> bool:
+        """Compare two format chars for compatibility."""
+        for compat_set in _string_format_compatibilities:
+            if a in compat_set and b in compat_set:
+                return True
+        return a == b
+
+    def _collect_placeholders(string: str) -> list[tuple[str | None, str]]:
+        """Get a list of placeholders in a format string."""
+        result = []
+        for match in PYTHON_FORMAT.finditer(string):
+            name, format_str, format_type = match.groups()
+            result.append((name, format_type))
+        return result
+
+    format_placeholders = _collect_placeholders(format)
+    alternative_placeholders = _collect_placeholders(alternative)
+
+    # If the original string uses named placeholders, the alternative
+    # must use named placeholders or no placeholders at all
+    if [name for name, _ in format_placeholders if name is not None]:
+        if [name for name, _ in alternative_placeholders if name is None]:
+            raise TranslationError('the format strings are of different kinds')
+
+    # Compare format chars
+    for (name1, type1), (name2, type2) in zip(format_placeholders, alternative_placeholders):
+        if not _compare_format_chars(type1, type2):
+            raise TranslationError('format specifiers are incompatible')
 checkers: list[Callable[[Catalog | None, Message], object]] = _find_checkers()
