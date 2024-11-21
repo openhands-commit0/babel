@@ -959,7 +959,37 @@ def get_locale_identifier(tup: tuple[str] | tuple[str, str | None] | tuple[str, 
     'de_DE_1999@custom'
     >>> get_locale_identifier(('fi', None, None, None, 'custom'))
     'fi@custom'
+    """
+    language, territory, script, variant, modifier = (None,) * 5
+    if len(tup) == 1:
+        language, = tup
+    elif len(tup) == 2:
+        language, territory = tup
+    elif len(tup) == 3:
+        language, territory, script = tup
+    elif len(tup) == 4:
+        language, territory, script, variant = tup
+    elif len(tup) == 5:
+        language, territory, script, variant, modifier = tup
+    else:
+        raise TypeError('Expected 1-5 elements in tuple, got %d' % len(tup))
 
+    if not language:
+        raise ValueError('Language code is required')
+
+    parts = [language]
+    if territory:
+        parts.append(territory)
+    if script:
+        parts.append(script)
+    if variant:
+        parts.append(variant)
+
+    identifier = sep.join(parts)
+    if modifier:
+        identifier += '@' + modifier
+
+    return identifier
 
     .. versionadded:: 1.0
 
