@@ -40,6 +40,19 @@ UTC = datetime.timezone.utc
 LOCALTZ = localtime.LOCALTZ
 LC_TIME = default_locale('LC_TIME')
 
+def _localize(tzinfo: datetime.tzinfo, dt: datetime.datetime) -> datetime.datetime:
+    """Convert a datetime object to a specific timezone.
+
+    The datetime object must be naive (have no tzinfo).
+
+    :param tzinfo: The timezone to convert to.
+    :param dt: The datetime object to convert.
+    :return: A datetime object with tzinfo.
+    """
+    if dt.tzinfo is not None:
+        raise ValueError('Expected naive datetime')
+    return dt.replace(tzinfo=tzinfo)
+
 def _get_dt_and_tzinfo(dt_or_tzinfo: _DtOrTzinfo) -> tuple[datetime.datetime | None, datetime.tzinfo]:
     """
     Parse a `dt_or_tzinfo` value into a datetime and a tzinfo.
@@ -48,7 +61,27 @@ def _get_dt_and_tzinfo(dt_or_tzinfo: _DtOrTzinfo) -> tuple[datetime.datetime | N
 
     :rtype: tuple[datetime, tzinfo]
     """
-    pass
+    if isinstance(dt_or_tzinfo, (int, float)):
+        dt = datetime.datetime.fromtimestamp(dt_or_tzinfo, UTC)
+        tzinfo = dt.tzinfo
+    elif isinstance(dt_or_tzinfo, datetime.datetime):
+        dt = dt_or_tzinfo
+        tzinfo = dt.tzinfo or UTC
+    elif isinstance(dt_or_tzinfo, datetime.time):
+        dt = datetime.datetime.now().replace(
+            hour=dt_or_tzinfo.hour,
+            minute=dt_or_tzinfo.minute,
+            second=dt_or_tzinfo.second,
+            microsecond=dt_or_tzinfo.microsecond
+        )
+        tzinfo = dt_or_tzinfo.tzinfo or UTC
+    elif isinstance(dt_or_tzinfo, datetime.tzinfo) or isinstance(dt_or_tzinfo, str):
+        dt = None
+        tzinfo = get_timezone(dt_or_tzinfo)
+    else:
+        dt = datetime.datetime.now(UTC)
+        tzinfo = UTC
+    return dt, tzinfo
 
 def _get_tz_name(dt_or_tzinfo: _DtOrTzinfo) -> str:
     """
